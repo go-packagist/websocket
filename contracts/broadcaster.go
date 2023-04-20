@@ -1,8 +1,8 @@
 package contracts
 
 type Broadcaster interface {
-	Subscribe(channel Channeler, subscriber ...Subscriber)
-	Unsubscribe(channel Channeler, subscriber ...Subscriber)
+	Subscribe(channel Channel, subscriber ...Subscriber)
+	Unsubscribe(channel Channel, subscriber ...Subscriber)
 
-	Broadcast(broadcast Broadcast)
+	Send(message *Message) // 广播消息
 }

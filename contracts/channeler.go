@@ -1,5 +1,5 @@
 package contracts
 
-type Channeler interface {
+type Channel interface {
 	Name() string
 }

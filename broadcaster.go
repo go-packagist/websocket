@@ -14,23 +14,13 @@ func NewBroadcaster() *Broadcaster {
 	}
 }
 
-func (b *Broadcaster) Broadcast(broadcast contracts.Broadcast) {
-	for _, channeler := range broadcast.Channels() {
-		for channel, subscribers := range b.subscribers {
-			if channel == channeler.Name() {
-				for _, subscriber := range subscribers {
-					subscriber.Send(&contracts.Payload{
-						Channel: channeler.Name(),
-						Event:   broadcast.Event(),
-						Data:    broadcast.Payload(),
-					})
-				}
-			}
-		}
+func (b *Broadcaster) Send(message *contracts.Message) {
+	for _, subscriber := range b.subscribers[message.Channel] {
+		subscriber.Send(message)
 	}
 }
 
-func (b *Broadcaster) Subscribe(channel contracts.Channeler, subscriber ...contracts.Subscriber) {
+func (b *Broadcaster) Subscribe(channel contracts.Channel, subscriber ...contracts.Subscriber) {
 	if _, ok := b.subscribers[channel.Name()]; !ok {
 		b.subscribers[channel.Name()] = make([]contracts.Subscriber, 0)
 	}
@@ -38,7 +28,7 @@ func (b *Broadcaster) Subscribe(channel contracts.Channeler, subscriber ...contr
 	b.subscribers[channel.Name()] = append(b.subscribers[channel.Name()], subscriber...)
 }
 
-func (b *Broadcaster) Unsubscribe(channel contracts.Channeler, subscriber ...contracts.Subscriber) {
+func (b *Broadcaster) Unsubscribe(channel contracts.Channel, subscriber ...contracts.Subscriber) {
 	if _, ok := b.subscribers[channel.Name()]; !ok {
 		return
 	}

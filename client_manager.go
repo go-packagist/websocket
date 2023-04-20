@@ -14,19 +14,22 @@ type SubscriberManager struct {
 
 func NewSubscriberManager() *SubscriberManager {
 	return &SubscriberManager{
-		clients: make(map[string]*Client),
+		clients: make(map[string]*Client, 1024),
 	}
 }
 
-func (m *SubscriberManager) NewClient(conn *websocket.Conn) *Client {
-	client := NewClient(conn)
+func (m *SubscriberManager) NewClient(conn *websocket.Conn) (*Client, error) {
+	client, err := NewClient(conn)
+	if err != nil {
+		return nil, err
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.clients[client.socketid] = client
+	m.clients[client.SocketID()] = client
 
-	return client
+	return client, nil
 }
 
 func (m *SubscriberManager) NewClientWithHttp(w http.ResponseWriter, r *http.Request, responseHeader http.Header) (*Client, error) {
@@ -42,7 +45,7 @@ func (m *SubscriberManager) NewClientWithHttp(w http.ResponseWriter, r *http.Req
 func (m *SubscriberManager) Handle(client *Client) {
 	for {
 		select {
-		case msg := <-client.Read():
+		case msg := <-client.Receive():
 			// fmt.Println("Handle read from client:", string(msg.Data))
 			m.kernelMesssage <- &Message{
 				From: client.SocketID(),
@@ -54,5 +57,23 @@ func (m *SubscriberManager) Handle(client *Client) {
 			m.RemoveClient(client.SocketID())
 			return
 		}
+	}
+}
+
+func (m *SubscriberManager) RemoveClient(socketid string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.clients, socketid)
+}
+
+func (m *SubscriberManager) ReadKernelMessage() <-chan *Message {
+	return m.kernelMesssage
+}
+
+func (m *SubscriberManager) Broadcast(msg *Message) {
+	for _, client := range m.clients {
+		// todo: Added filter to client
+		client.Send(msg)
 	}
 }

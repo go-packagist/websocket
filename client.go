@@ -14,17 +14,17 @@ type Client struct {
 	conn     *websocket.Conn
 	closed   chan struct{}
 
-	sendChan    chan *contracts.Payload
-	receiveChan chan *contracts.Payload
+	sendChan    chan *contracts.Message
+	receiveChan chan *contracts.Message
 }
 
-var _ contracts.WebsocketClient = (*Client)(nil)
+var _ contracts.Client = (*Client)(nil)
 
 func NewClient(conn *websocket.Conn) (*Client, error) {
 	c := &Client{
 		conn:        conn,
-		sendChan:    make(chan *contracts.Payload, 1024),
-		receiveChan: make(chan *contracts.Payload, 1024),
+		sendChan:    make(chan *contracts.Message, 1024),
+		receiveChan: make(chan *contracts.Message, 1024),
 		closed:      make(chan struct{}),
 	}
 
@@ -73,12 +73,11 @@ func (c *Client) send() {
 }
 
 // Send to client use channel
-func (c *Client) Send(payload *contracts.Payload) {
-	c.sendChan <- payload
+func (c *Client) Send(message *contracts.Message) {
+	c.sendChan <- message
 }
 
-// Receive from client to channel
-func (c *Client) Receive() {
+func (c *Client) receive() {
 	defer func() {
 		if err := c.close(); err != nil {
 			log.Printf("Error closing client: %v", err)
@@ -110,11 +109,22 @@ func (c *Client) Receive() {
 				continue // if error, continue to next message
 			}
 
-			c.receiveChan <- payload
+			c.receiveChan <- &contracts.Message{
+				MessageType: messageType,
+				Payload:     payload,
+				From:        c.socketid,
+			}
 		default:
 			log.Printf("Unknown message type: %v", messageType)
 		}
 	}
+}
+
+// Receive from client to channel and return channel
+func (c *Client) Receive() <-chan *contracts.Message {
+	go c.receive()
+
+	return c.receiveChan
 }
 
 // close closes the client.

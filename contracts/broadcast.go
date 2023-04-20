@@ -1,7 +1,7 @@
 package contracts
 
 type Broadcast interface {
-	Channels() []Channeler
+	Channels() []Channel
 	Event() string
 	Payload() interface{}
 }

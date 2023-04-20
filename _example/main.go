@@ -12,7 +12,7 @@ type subscriber struct {
 
 var _ contracts.Subscriber = (*subscriber)(nil)
 
-func (s *subscriber) Send(payload *contracts.Payload) {
+func (s *subscriber) Send(payload *contracts.Message) {
 	fmt.Println(payload)
 }
 
@@ -23,13 +23,13 @@ func main() {
 	broadcaster.Subscribe(websocket.NewChannel("order-created"), &subscriber{})
 	broadcaster.Subscribe(websocket.NewChannel("order-creating"), &subscriber{})
 
-	broadcaster.Broadcast(&broadcast.OrderCreated{
+	broadcaster.Send(&broadcast.OrderCreated{
 		OrderId:     1,
 		OrderStatus: "created",
 		CreatedAt:   "2020-01-01 00:00:00",
 	})
 
-	broadcaster.Broadcast(&broadcast.OrderCreating{
+	broadcaster.Send(&broadcast.OrderCreating{
 		OrderId:     2,
 		OrderStatus: "creating",
 		CreatedAt:   "2020-01-01 00:00:00",

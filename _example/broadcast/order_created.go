@@ -13,8 +13,8 @@ type OrderCreated struct {
 
 var _ contracts.Broadcast = (*OrderCreated)(nil)
 
-func (b *OrderCreated) Channels() []contracts.Channeler {
-	return []contracts.Channeler{
+func (b *OrderCreated) Channels() []contracts.Channel {
+	return []contracts.Channel{
 		websocket.NewChannel("order-created"),
 	}
 }

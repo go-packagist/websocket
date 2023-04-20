@@ -6,7 +6,7 @@ type Channel struct {
 	name string
 }
 
-var _ contracts.Channeler = (*Channel)(nil)
+var _ contracts.Channel = (*Channel)(nil)
 
 func NewChannel(name string) *Channel {
 	return &Channel{
