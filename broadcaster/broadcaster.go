@@ -1,9 +1,15 @@
 package broadcaster
 
-import "github.com/go-fires/websocket/contracts"
+import (
+	"sync"
+
+	"github.com/go-fires/websocket/contracts"
+)
 
 type Broadcaster struct {
 	subscribers map[string][]contracts.Subscriber
+
+	mu sync.Mutex
 }
 
 var _ contracts.Broadcaster = (*Broadcaster)(nil)
@@ -22,7 +28,9 @@ func (b *Broadcaster) Send(message *contracts.Message) {
 
 func (b *Broadcaster) Subscribe(channel contracts.Channel, subscriber ...contracts.Subscriber) {
 	if _, ok := b.subscribers[channel.Name()]; !ok {
+		b.mu.Lock()
 		b.subscribers[channel.Name()] = make([]contracts.Subscriber, 0)
+		b.mu.Unlock()
 	}
 
 	b.subscribers[channel.Name()] = append(b.subscribers[channel.Name()], subscriber...)

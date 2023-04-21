@@ -1,13 +1,5 @@
 package contracts
 
-type Publisher interface {
-	Client
-}
-
-type Subscriber interface {
-	Client
-}
-
 type Sender interface {
 	Send(message *Message)
 }
@@ -16,7 +8,18 @@ type Receiver interface {
 	Receive() <-chan *Message
 }
 
-type Client interface {
-	Sender
+type Publisher interface {
 	Receiver
+}
+
+type Subscriber interface {
+	Sender
+
+	Subscribe() <-chan Channel
+	Unsubscribe() <-chan Channel
+}
+
+type Client interface {
+	Subscriber
+	Publisher
 }

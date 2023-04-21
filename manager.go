@@ -57,13 +57,36 @@ func (m *Manager) ClientCount() int {
 	return len(m.clients)
 }
 
-func (m *Manager) Broadcast(msg *contracts.Message) error {
-	return m.messageHub.Push(msg)
+func (m *Manager) Broadcast(message *contracts.Message) error {
+	return m.messageHub.Push(message)
+}
+
+func (m *Manager) BroadcastUse(broadcast contracts.Broadcast) error {
+	for _, channel := range broadcast.Channels() {
+		err := m.Broadcast(&contracts.Message{
+			Channel: channel.Name(),
+			Event:   broadcast.Event(),
+			Payload: broadcast.Payload(),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (m *Manager) BroadcastTo(channel string, event string, payload interface{}) error {
-	return m.messageHub.Push(&contracts.Message{
+	return m.Broadcast(&contracts.Message{
 		Channel: channel,
+		Event:   event,
+		Payload: payload,
+	})
+}
+
+func (m *Manager) BroadcastToAll(event string, payload interface{}) error {
+	return m.Broadcast(&contracts.Message{
+		Channel: "all",
 		Event:   event,
 		Payload: payload,
 	})
