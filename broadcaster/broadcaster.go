@@ -7,7 +7,7 @@ import (
 )
 
 type Broadcaster struct {
-	subscribers map[string][]contracts.Subscriber
+	subscribers map[string][]contracts.Subscriber // channel name -> subscribers
 
 	mu sync.Mutex
 }
@@ -21,8 +21,12 @@ func NewBroadcaster() *Broadcaster {
 }
 
 func (b *Broadcaster) Send(message *contracts.Message) {
-	for _, subscriber := range b.subscribers[message.Channel] {
-		subscriber.Send(message)
+	if subscribers, ok := b.subscribers[message.Channel]; !ok {
+		return
+	} else {
+		for _, subscriber := range subscribers {
+			subscriber.Send(message)
+		}
 	}
 }
 
