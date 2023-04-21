@@ -1,6 +1,20 @@
 package websocket
 
-import "github.com/go-fires/websocket/contracts"
+import (
+	"strings"
+
+	"github.com/go-fires/websocket/contracts"
+)
+
+const (
+	PrivateChannelPrefix  = "private-"
+	PresenceChannelPrefix = "presence-"
+	ClientChannelPrefix   = "client-"
+)
+
+var (
+	AllChannel = NewChannel("all")
+)
 
 type Channel struct {
 	name string
@@ -15,15 +29,15 @@ func NewChannel(name string) *Channel {
 }
 
 func NewPrivateChannel(name string) *Channel {
-	return NewChannel("private-" + name)
+	return NewChannel(PrivateChannelPrefix + name)
 }
 
 func NewPresenceChannel(name string) *Channel {
-	return NewChannel("presence-" + name)
+	return NewChannel(PresenceChannelPrefix + name)
 }
 
 func NewClientChannel(name string) *Channel {
-	return NewChannel("client-" + name)
+	return NewChannel(ClientChannelPrefix + name)
 }
 
 func (c *Channel) Name() string {
@@ -31,9 +45,13 @@ func (c *Channel) Name() string {
 }
 
 func (c *Channel) IsPrivate() bool {
-	return c.name[:8] == "private-"
+	return strings.Index(c.name, PrivateChannelPrefix) == 0
 }
 
 func (c *Channel) IsPresence() bool {
-	return c.name[:10] == "presence-"
+	return strings.Index(c.name, PresenceChannelPrefix) == 0
+}
+
+func (c *Channel) IsClient() bool {
+	return strings.Index(c.name, ClientChannelPrefix) == 0
 }
