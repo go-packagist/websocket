@@ -78,8 +78,8 @@ func (c *Client) write() {
 }
 
 // Send to client use channel
-func (c *Client) Send(message *contracts.Message) {
-	c.sendChan <- message
+func (c *Client) Send() chan<- *contracts.Message {
+	return c.sendChan
 }
 
 func (c *Client) receive() {

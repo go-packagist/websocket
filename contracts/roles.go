@@ -1,7 +1,7 @@
 package contracts
 
 type Sender interface {
-	Send(message *Message)
+	Send() chan<- *Message
 }
 
 type Receiver interface {
