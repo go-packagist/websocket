@@ -25,7 +25,7 @@ func (b *Broadcaster) Send(message *contracts.Message) {
 		return
 	} else {
 		for _, subscriber := range subscribers {
-			subscriber.Send() <- message
+			subscriber.Receive() <- message
 		}
 	}
 }

@@ -10,6 +10,6 @@ type Message struct {
 
 // MessageHub is a message hub interface, for example, you can use redis, mq... as a message hub.
 type MessageHub interface {
-	Push(message *Message) error
-	Pop() <-chan *Message
+	In() chan<- *Message
+	Out() <-chan *Message
 }

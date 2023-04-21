@@ -57,35 +57,30 @@ func (m *Manager) ClientCount() int {
 	return len(m.clients)
 }
 
-func (m *Manager) Broadcast(message *contracts.Message) error {
-	return m.messageHub.Push(message)
+func (m *Manager) Broadcast(message *contracts.Message) {
+	m.messageHub.In() <- message
 }
 
-func (m *Manager) BroadcastUse(broadcast contracts.Broadcast) error {
+func (m *Manager) BroadcastUse(broadcast contracts.Broadcast) {
 	for _, channel := range broadcast.Channels() {
-		err := m.Broadcast(&contracts.Message{
+		m.Broadcast(&contracts.Message{
 			Channel: channel.Name(),
 			Event:   broadcast.Event(),
 			Payload: broadcast.Payload(),
 		})
-		if err != nil {
-			return err
-		}
 	}
-
-	return nil
 }
 
-func (m *Manager) BroadcastTo(channel string, event string, payload interface{}) error {
-	return m.Broadcast(&contracts.Message{
+func (m *Manager) BroadcastTo(channel string, event string, payload interface{}) {
+	m.Broadcast(&contracts.Message{
 		Channel: channel,
 		Event:   event,
 		Payload: payload,
 	})
 }
 
-func (m *Manager) BroadcastToAll(event string, payload interface{}) error {
-	return m.Broadcast(&contracts.Message{
+func (m *Manager) BroadcastToAll(event string, payload interface{}) {
+	m.Broadcast(&contracts.Message{
 		Channel: "all",
 		Event:   event,
 		Payload: payload,
@@ -104,11 +99,8 @@ func (m *Manager) Handle(client *Client) {
 			m.broadcaster.Subscribe(channel, client)
 		case channel := <-client.Unsubscribe():
 			m.broadcaster.Unsubscribe(channel, client)
-		case msg := <-client.Receive():
-			err := m.messageHub.Push(msg)
-			if err != nil {
-				// todo: retry or log
-			}
+		case msg := <-client.Send():
+			m.messageHub.In() <- msg
 		case <-client.Closed():
 			return
 		}
@@ -120,7 +112,7 @@ func (m *Manager) Start() {
 	go func() {
 		for {
 			select {
-			case msg := <-m.messageHub.Pop():
+			case msg := <-m.messageHub.Out():
 				m.broadcaster.Send(msg)
 			}
 		}

@@ -13,12 +13,11 @@ func NewChannelHub() *ChannelHub {
 		message: make(chan *contracts.Message, 1024),
 	}
 }
-func (m *ChannelHub) Push(message *contracts.Message) error {
-	m.message <- message
 
-	return nil
+func (m *ChannelHub) In() chan<- *contracts.Message {
+	return m.message
 }
 
-func (m *ChannelHub) Pop() <-chan *contracts.Message {
+func (m *ChannelHub) Out() <-chan *contracts.Message {
 	return m.message
 }

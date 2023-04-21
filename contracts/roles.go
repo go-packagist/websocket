@@ -1,19 +1,19 @@
 package contracts
 
 type Sender interface {
-	Send() chan<- *Message
+	Send() <-chan *Message
 }
 
 type Receiver interface {
-	Receive() <-chan *Message
+	Receive() chan<- *Message
 }
 
 type Publisher interface {
-	Receiver
+	Sender
 }
 
 type Subscriber interface {
-	Sender
+	Receiver
 
 	Subscribe() <-chan Channel
 	Unsubscribe() <-chan Channel

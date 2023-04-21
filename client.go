@@ -67,7 +67,7 @@ func (c *Client) SocketID() string {
 func (c *Client) write() {
 	for {
 		select {
-		case payload := <-c.sendChan:
+		case payload := <-c.receiveChan:
 			if err := c.conn.WriteJSON(payload); err != nil {
 				log.Printf("Error sending message to client: %v", err)
 			}
@@ -77,12 +77,14 @@ func (c *Client) write() {
 	}
 }
 
-// Send to client use channel
-func (c *Client) Send() chan<- *contracts.Message {
+// Send client to server
+func (c *Client) Send() <-chan *contracts.Message {
+	go c.send()
+
 	return c.sendChan
 }
 
-func (c *Client) receive() {
+func (c *Client) send() {
 	defer func() {
 		if err := c.close(); err != nil {
 			log.Printf("Error closing client: %v", err)
@@ -100,14 +102,14 @@ func (c *Client) receive() {
 		case websocket.CloseMessage:
 			return
 		case websocket.PingMessage:
-			c.receiveChan <- &contracts.Message{
+			c.sendChan <- &contracts.Message{
 				MessageType: websocket.PingMessage,
 				Owner:       c.socketid,
 				Event:       "socket:ping",
 				Payload:     msg,
 			}
 		case websocket.PongMessage:
-			c.receiveChan <- &contracts.Message{
+			c.sendChan <- &contracts.Message{
 				MessageType: websocket.PongMessage,
 				Owner:       c.socketid,
 				Event:       "socket:pong",
@@ -121,7 +123,7 @@ func (c *Client) receive() {
 				continue // if error, continue to next message
 			}
 
-			c.receiveChan <- &contracts.Message{
+			c.sendChan <- &contracts.Message{
 				MessageType: messageType,
 				Owner:       c.socketid,
 				Channel:     message.Channel,
@@ -134,10 +136,8 @@ func (c *Client) receive() {
 	}
 }
 
-// Receive from client to channel and return channel
-func (c *Client) Receive() <-chan *contracts.Message {
-	go c.receive()
-
+// Receive server to client
+func (c *Client) Receive() chan<- *contracts.Message {
 	return c.receiveChan
 }
 
