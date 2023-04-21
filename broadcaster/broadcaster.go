@@ -1,4 +1,4 @@
-package websocket
+package broadcaster
 
 import "github.com/go-fires/websocket/contracts"
 

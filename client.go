@@ -2,35 +2,40 @@ package websocket
 
 import (
 	"encoding/json"
+	"log"
+	"net/http"
+
 	"github.com/go-fires/websocket/contracts"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
-	"log"
-	"net/http"
 )
 
 type Client struct {
 	socketid string
 	conn     *websocket.Conn
-	closed   chan struct{}
 
-	sendChan    chan *contracts.Message
-	receiveChan chan *contracts.Message
+	sendChan        chan *contracts.Message
+	receiveChan     chan *contracts.Message
+	subscribeChan   chan contracts.Channel
+	unsubscribeChan chan contracts.Channel
+	closed          chan struct{}
 }
 
 var _ contracts.Client = (*Client)(nil)
 
 func NewClient(conn *websocket.Conn) (*Client, error) {
 	c := &Client{
-		conn:        conn,
-		sendChan:    make(chan *contracts.Message, 1024),
-		receiveChan: make(chan *contracts.Message, 1024),
-		closed:      make(chan struct{}),
+		conn:            conn,
+		sendChan:        make(chan *contracts.Message, 1024),
+		receiveChan:     make(chan *contracts.Message, 1024),
+		subscribeChan:   make(chan contracts.Channel, 1),
+		unsubscribeChan: make(chan contracts.Channel, 1),
+		closed:          make(chan struct{}),
 	}
 
 	c.generateSocketID()
 
-	go c.send()
+	go c.write()
 
 	return c, nil
 }
@@ -58,8 +63,8 @@ func (c *Client) SocketID() string {
 	return c.socketid
 }
 
-// send to client
-func (c *Client) send() {
+// write() to client
+func (c *Client) write() {
 	for {
 		select {
 		case payload := <-c.sendChan:
@@ -85,7 +90,7 @@ func (c *Client) receive() {
 	}()
 
 	for {
-		messageType, message, err := c.conn.ReadMessage()
+		messageType, msg, err := c.conn.ReadMessage()
 		if err != nil {
 			log.Printf("Error reading message from client: %v", err)
 			return
@@ -95,24 +100,33 @@ func (c *Client) receive() {
 		case websocket.CloseMessage:
 			return
 		case websocket.PingMessage:
-			if err := c.conn.WriteMessage(websocket.PongMessage, []byte{}); err != nil {
-				log.Printf("Error sending pong message to client: %v", err)
-				return
+			c.receiveChan <- &contracts.Message{
+				MessageType: websocket.PingMessage,
+				Owner:       c.socketid,
+				Event:       "socket:ping",
+				Payload:     msg,
 			}
 		case websocket.PongMessage:
-			continue
+			c.receiveChan <- &contracts.Message{
+				MessageType: websocket.PongMessage,
+				Owner:       c.socketid,
+				Event:       "socket:pong",
+				Payload:     msg,
+			}
 		case websocket.TextMessage:
 		case websocket.BinaryMessage:
-			var payload *contracts.Payload
-			if err := json.Unmarshal(message, &payload); err != nil {
+			var message *contracts.Message
+			if err := json.Unmarshal(msg, &message); err != nil {
 				log.Printf("Error unmarshal message from client: %v", err)
 				continue // if error, continue to next message
 			}
 
 			c.receiveChan <- &contracts.Message{
 				MessageType: messageType,
-				Payload:     payload,
-				From:        c.socketid,
+				Owner:       c.socketid,
+				Channel:     message.Channel,
+				Event:       message.Event,
+				Payload:     message.Payload,
 			}
 		default:
 			log.Printf("Unknown message type: %v", messageType)
@@ -136,4 +150,12 @@ func (c *Client) close() error {
 // Closed returns a channel that is closed when the client is closed.
 func (c *Client) Closed() <-chan struct{} {
 	return c.closed
+}
+
+func (c *Client) Subscribe() <-chan contracts.Channel {
+	return c.subscribeChan
+}
+
+func (c *Client) Unsubscribe() <-chan contracts.Channel {
+	return c.unsubscribeChan
 }

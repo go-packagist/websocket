@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/go-fires/websocket"
 	"github.com/go-fires/websocket/_example/broadcast"
+	"github.com/go-fires/websocket/broadcaster"
 	"github.com/go-fires/websocket/contracts"
 )
 
@@ -17,7 +19,7 @@ func (s *subscriber) Send(payload *contracts.Message) {
 }
 
 func main() {
-	broadcaster := websocket.NewBroadcaster()
+	broadcaster := broadcaster.NewBroadcaster()
 
 	broadcaster.Subscribe(websocket.NewChannel("order-created"), &subscriber{})
 	broadcaster.Subscribe(websocket.NewChannel("order-created"), &subscriber{})
