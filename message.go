@@ -19,9 +19,9 @@ type Message struct {
 }
 
 type Payload struct {
-	Channel string      `json:"channel"`
-	Event   string      `json:"event"`
-	Data    interface{} `json:"data"`
+	Channel Channel     `json:"channel,omitempty"`
+	Event   string      `json:"event,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
 }
 
 func (p *Payload) Unmarshal(payload []byte) error {
