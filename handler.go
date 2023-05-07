@@ -1,8 +1,8 @@
 package websocket
 
 type Handler interface {
-	Opened(socketer Socketable)
-	Closed(socketer Socketable)
-	Message(socketer Socketable, message *Message)
-	Error(socketer Socketable, err error)
+	Opened(client *Client)
+	Message(client *Client, message *Message)
+	Error(client *Client, err error)
+	Closed(client *Client)
 }
