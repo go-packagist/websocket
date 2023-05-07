@@ -13,7 +13,7 @@ func main() {
 	go server.Start()
 
 	http.HandleFunc("/wss", func(w http.ResponseWriter, r *http.Request) {
-		client, err := websocket.UpgradeClient(w, r, nil)
+		client, err := websocket.UpgradeClient(server, w, r, nil)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))

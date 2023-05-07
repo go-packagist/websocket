@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"sync"
 	"time"
 )
 
@@ -8,6 +9,8 @@ type Server struct {
 	clients map[string]*Client
 	handler Handler
 	broker  Broker
+
+	mu sync.Mutex
 }
 
 func NewServer(handler Handler, broker Broker) *Server {
@@ -37,6 +40,7 @@ func (s *Server) Broadcast(message *Message) {
 // Emit a message to all subscriber clients in current node
 func (s *Server) Emit(message *Message) {
 	if message.Payload != nil && message.Payload.Channel != "" {
+		// TODO: optimize this loop
 		for _, client := range s.clients {
 			if client.In(message.Payload.Channel) {
 				client.Write() <- message
@@ -46,14 +50,18 @@ func (s *Server) Emit(message *Message) {
 }
 
 func (s *Server) stop() {
+	_ = s.broker.Close()
+
 	for _, client := range s.clients {
 		client.Close()
 	}
 }
+
 func (s *Server) Handle(client *Client) {
 	s.clients[client.ID()] = client
 	defer func() {
 		delete(s.clients, client.ID())
+		client.Close()
 	}()
 
 	for {

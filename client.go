@@ -18,7 +18,7 @@ var (
 type Client struct {
 	id       string
 	conn     *websocket.Conn
-	channels []Channel
+	channels map[Channel]struct{}
 
 	readChan  chan *Message
 	writeChan chan *Message
@@ -38,7 +38,7 @@ func NewClient(conn *websocket.Conn) *Client {
 	return &Client{
 		id:        uuid.NewV4().String(),
 		conn:      conn,
-		channels:  make([]Channel, 0),
+		channels:  make(map[Channel]struct{}),
 		readChan:  make(chan *Message, 1024),
 		writeChan: make(chan *Message, 1024),
 		errorChan: make(chan error, 1),
@@ -146,44 +146,45 @@ func (c *Client) Subscribe(channel Channel) error {
 		return ErrClientAlreadySubscribed
 	}
 
-	c.channels = append(c.channels, channel)
+	c.channels[channel] = struct{}{}
 
 	return nil
 }
 
 func (c *Client) Unsubscribe(channel Channel) error {
+	if !c.In(channel) {
+		return ErrClientNotSubscribed
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	for i, ch := range c.channels {
-		if ch == channel {
-			c.channels = append(c.channels[:i], c.channels[i+1:]...)
-			return nil
-		}
-	}
+	delete(c.channels, channel)
 
-	return ErrClientNotSubscribed
+	return nil
 }
 
 func (c *Client) UnsubscribeAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.channels = make([]Channel, 0)
+	c.channels = make(map[Channel]struct{})
 }
 
 func (c *Client) In(channel Channel) bool {
-	for _, ch := range c.channels {
-		if ch == channel {
-			return true
-		}
-	}
+	_, ok := c.channels[channel]
 
-	return false
+	return ok
 }
 
 func (c *Client) Channels() []Channel {
-	return c.channels
+	channels := make([]Channel, 0, len(c.channels))
+
+	for channel := range c.channels {
+		channels = append(channels, channel)
+	}
+
+	return channels
 }
 
 func (c *Client) ID() string {
